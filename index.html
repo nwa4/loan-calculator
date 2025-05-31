@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for Inter font and general body styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Full viewport height */
+            padding: 1rem; /* Padding around the content */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Loan Calculator</h1>
+
+        <div class="mb-4">
+            <label for="loanAmount" class="block text-gray-700 text-sm font-semibold mb-2">Loan Amount ($)</label>
+            <input type="number" id="loanAmount" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 200000" min="0" step="any">
+        </div>
+
+        <div class="mb-4">
+            <label for="interestRate" class="block text-gray-700 text-sm font-semibold mb-2">Annual Interest Rate (%)</label>
+            <input type="number" id="interestRate" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 4.5" min="0" step="any">
+        </div>
+
+        <div class="mb-6">
+            <label for="loanTerm" class="block text-gray-700 text-sm font-semibold mb-2">Loan Term (Years)</label>
+            <input type="number" id="loanTerm" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 30" min="1" step="1">
+        </div>
+
+        <button id="calculateBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg w-full transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+            Calculate Loan
+        </button>
+
+        <div id="results" class="mt-8 p-6 bg-blue-50 rounded-lg shadow-inner hidden">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Calculation Results:</h2>
+            <div class="mb-3">
+                <p class="text-gray-700 text-base">Monthly Payment:</p>
+                <p id="monthlyPayment" class="text-blue-700 text-lg font-bold"></p>
+            </div>
+            <div class="mb-3">
+                <p class="text-gray-700 text-base">Total Payment:</p>
+                <p id="totalPayment" class="text-blue-700 text-lg font-bold"></p>
+            </div>
+            <div>
+                <p class="text-gray-700 text-base">Total Interest:</p>
+                <p id="totalInterest" class="text-blue-700 text-lg font-bold"></p>
+            </div>
+        </div>
+
+        <div id="messageBox" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+                <p id="messageText" class="text-gray-800 text-lg mb-4"></p>
+                <button id="closeMessageBox" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loanAmountInput = document.getElementById('loanAmount');
+            const interestRateInput = document.getElementById('interestRate');
+            const loanTermInput = document.getElementById('loanTerm');
+            const calculateBtn = document.getElementById('calculateBtn');
+            const resultsDiv = document.getElementById('results');
+            const monthlyPaymentSpan = document.getElementById('monthlyPayment');
+            const totalPaymentSpan = document.getElementById('totalPayment');
+            const totalInterestSpan = document.getElementById('totalInterest');
+            const messageBox = document.getElementById('messageBox');
+            const messageText = document.getElementById('messageText');
+            const closeMessageBoxBtn = document.getElementById('closeMessageBox');
+
+            // Function to show a custom message box
+            function showMessageBox(message) {
+                messageText.textContent = message;
+                messageBox.classList.remove('hidden');
+            }
+
+            // Function to hide the custom message box
+            closeMessageBoxBtn.addEventListener('click', () => {
+                messageBox.classList.add('hidden');
+            });
+
+            calculateBtn.addEventListener('click', () => {
+                const loanAmount = parseFloat(loanAmountInput.value);
+                const annualInterestRate = parseFloat(interestRateInput.value);
+                const loanTermYears = parseFloat(loanTermInput.value);
+
+                // Input validation
+                if (isNaN(loanAmount) || isNaN(annualInterestRate) || isNaN(loanTermYears) ||
+                    loanAmount <= 0 || annualInterestRate < 0 || loanTermYears <= 0) {
+                    showMessageBox('Please enter valid positive numbers for all fields.');
+                    resultsDiv.classList.add('hidden'); // Hide results if inputs are invalid
+                    return;
+                }
+
+                // Convert annual interest rate to monthly rate
+                const monthlyInterestRate = (annualInterestRate / 100) / 12;
+                // Convert loan term from years to months
+                const loanTermMonths = loanTermYears * 12;
+
+                let monthlyPayment;
+                if (monthlyInterestRate === 0) {
+                    // Simple calculation if interest rate is 0
+                    monthlyPayment = loanAmount / loanTermMonths;
+                } else {
+                    // Formula for monthly payment (M = P [ i(1 + i)^n ] / [ (1 + i)^n – 1])
+                    // P = Principal Loan Amount
+                    // i = Monthly Interest Rate
+                    // n = Total Number of Payments (Loan Term in Months)
+                    monthlyPayment = loanAmount * (monthlyInterestRate * Math.pow(1 + monthlyInterestRate, loanTermMonths)) / (Math.pow(1 + monthlyInterestRate, loanTermMonths) - 1);
+                }
+
+                const totalPayment = monthlyPayment * loanTermMonths;
+                const totalInterest = totalPayment - loanAmount;
+
+                // Display results, formatted to 2 decimal places
+                monthlyPaymentSpan.textContent = `$${monthlyPayment.toFixed(2)}`;
+                totalPaymentSpan.textContent = `$${totalPayment.toFixed(2)}`;
+                totalInterestSpan.textContent = `$${totalInterest.toFixed(2)}`;
+
+                resultsDiv.classList.remove('hidden'); // Show the results section
+            });
+        });
+    </script>
+</body>
+</html>
